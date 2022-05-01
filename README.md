@@ -3,4 +3,4 @@
 
 
 
-## Dicom, nifti file, raw data convering
+## Dicom, nifti file, raw data converting
