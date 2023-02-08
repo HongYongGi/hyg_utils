@@ -41,4 +41,29 @@ def makedir(dir):
     if not os.path.exists(dir):
         os.makedirs(dir)
         
-def 
+def nii2niigz(nii_path):
+    """ Convert nii to niigz """
+    nii = nib.load(nii_path)
+    nib.save(nii, nii_path + '.gz')
+    os.remove(nii_path)
+
+
+def niigz2nii(niigz_path):
+    """ Convert niigz to nii """
+    nii = nib.load(niigz_path)
+    nib.save(nii, niigz_path[:-3])
+    os.remove(niigz_path)
+
+
+def dcm2nii(dcm_path, nii_path):
+    """ 
+    Convert dcm to nii 
+    
+    Args:
+        dcm_path (str): dcm file path
+        nii_path (str): nii file path
+        
+    """
+    dicom2nifti.convert_directory(dcm_path, nii_path, compression=True, reorient=True)
+    print('Convert Complete!')
+    
