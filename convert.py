@@ -90,7 +90,6 @@ def nii2dcm(save_dir_path, nifti_dir_path, ref_dicom_dir_path, debug = False):
     debug : bool
     If True, print the path of nifti and dicom files
 
-
     """
     nii_paths = glob.glob(nifti_dir_path + '/*.nii')
     nii_paths.sort()
@@ -146,5 +145,43 @@ def nii2dcm(save_dir_path, nifti_dir_path, ref_dicom_dir_path, debug = False):
     clear_output(wait=True)
     print('nifti2dicom conversion completed!')
 
+def raw2nii(raw_dir_path, nii_dir_path, save_dir_path, debug = False):
+    niis = glob.glob(nii_dir_path + '/*.nii')
+    niis.sort()
+    gz_flag = False
+    if len(niis) == 0:
+        gz_flag = True
+        niis = glob.glob(nii_dir_path+'/*.nii.gz')
+        niis.sort()
+    else:
+        pass
+    for nii in tqdm(niis):
+        file_name  = get_filename(nii)
+        if gz_flag:
+
+            raw_files = glob.glob(raw_dir_path + f'/{file_name[:-7]}*')
+        else:
+            raw_files = glob.glob(raw_dir_path + f'/{file_name[:-4]}*')
+            
+        raw_files.sort()
+
+        if len(raw_files) == 0:
+            print(f'No raw file found for {file_name}')
+            continue
+        else:
+            pass
 
 
+        if debug:
+            print(f'raw file : {raw_files}')
+            print(f'nii file : {nii}')
+        else:
+            pass    
+        
+
+        nii_arr = load_nii(nii)
+        mask_out = np.zeros((nii_arr.shape[2], nii_arr.shape[1], nii_arr.shape[0])) 
+        for i, raw_file in enumerate(raw_files,1):
+            cls = int(raw_file[raw_file.rfind('_gt')+3:raw_file.rfind('.')])
+            mask = np.fromfile(raw_file, dtype='uint8', sep="")
+            

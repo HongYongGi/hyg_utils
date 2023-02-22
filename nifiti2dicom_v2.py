@@ -52,7 +52,6 @@ def nifti2dicom_v2_monib(root_path, nifti_dir_path, ref_dicom_dir_path, debug= F
             dicom_file.SeriesDescription = "R&S Data"
             dicom_file.PixelData = arr.tobytes()
             dicom_file.RescaleIntercept = 0
-            
             dicom_file.save_as(os.path.join(save_path, f'slice_00{slice:04}.dcm'))
             
     print('nifti2dicom conversion completed!')

@@ -276,3 +276,59 @@ def comparison_image_plot(nii_path,
 
 
 
+
+
+
+class DrawMaskSample:
+    def __init__(self, nii_paths, i, ax):
+        self.xyz_li = None
+        self.i = i
+        self.ax = ax
+        self.nii_sample = nib.load(nii_paths[self.i]).get_fdata()
+        self.get_xyz()
+        self.draw_sample_3d()
+
+    def get_xyz(self):
+        self.xyz_li = []
+        cnt = 0
+        max_cnt = self.nii_sample.shape[-1]
+        for iter_z, (iter_img) in enumerate(self.nii_sample.transpose(2, 0, 1)):
+            for iter_x, iter_arr_y in enumerate(iter_img):
+                iter_arr_y = np.where(iter_arr_y)[0]
+                if len(iter_arr_y) >= 1:
+                    iter_arr_y = list(
+                        {iter_arr_y.max(), iter_arr_y.min()})
+                    xyz = [
+                        (iter_x, iter_y, iter_z)
+                        for iter_y in iter_arr_y
+                        if np.any(iter_y)
+                    ]
+                    self.xyz_li.append(xyz)
+            cnt += 1
+
+    def draw_sample_3d(self):
+        xyz_matrix = np.array(list(itertools.chain.from_iterable(self.xyz_li)))
+        X = xyz_matrix[:, 0]
+        Y = xyz_matrix[:, 1]
+        Z = xyz_matrix[:, 2]
+
+        self.ax.scatter(X, Y, Z, s=1, alpha=0.05, color='#e3dac9')
+        xlim, ylim, zlim = self.nii_sample.shape
+        self.ax.set_xlim(0, xlim)
+        self.ax.set_ylim(0, ylim)
+        self.ax.set_zlim(0, zlim)
+        self.ax.set_title(f'sample - ({self.i + 1})')
+        self.ax.set_yticklabels([])
+        self.ax.set_xticklabels([])
+        self.ax.set_zticklabels([])
+        self.ax.set_facecolor('#081921')
+
+
+
+# fig = plt.figure(figsize=(24, 24))
+# for i in range(9):
+#     ax = fig.add_subplot(int(f'33{i + 1}'), projection='3d')
+#     DrawMaskSample(nii_paths, i, ax)
+
+# plt.tight_layout()
+# plt.show()
