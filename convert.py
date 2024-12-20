@@ -2,8 +2,7 @@
 Log
 
 * Written by YongGi Hong / email : hyg4438@gmail.com
-
-*  Written date : 20230208
+*  Written date : 20241220
 ---
 
 Description
@@ -33,6 +32,10 @@ def load_nii(nii_path):
     """ Load nii file """
     return nib.load(nii_path).get_fdata()
 
+def save_nii(path, header, affine, arr):
+    nii = nib.Nifti1Image(arr, affine, header)
+    nib.save(nii, path)
+
 def load_dcm(dcm_dir):
     
     dcm_list = glob.glob(dcm_dir + '/*.dcm')
@@ -45,143 +48,44 @@ def load_dcm(dcm_dir):
                          axes=(1, 2, 0))
     return image
 
-
-    
-
-
-
-
-###################################################################
-def get_filename(path):
-    """ Get the filename from a path"""
-    return os.path.basename(path)
-
-def get_dirname(path):
-    """ Get the directory name from a path"""
-    return os.path.dirname(path)
-
-def makedir(dir):
-    """ Create a directory if it does not exist"""
-    if not os.path.exists(dir):
-        os.makedirs(dir)
-        
-def nii2niigz(nii_path):
-    """ Convert nii to niigz """
+def dcm2nii(dcm_dir, nii_path):
+    dicom2nifti.convert_directory(dcm_dir, nii_path)
     nii = nib.load(nii_path)
-    nib.save(nii, nii_path + '.gz')
-    os.remove(nii_path)
+    header = nii.header
+    affine = nii.affine
+    arr = load_dcm(dcm_dir)
+    nii_image = nib.Nifti1Image(arr, affine, header)
+    nib.save(nii_image, nii_path)
 
+def nii2niigz(nii_path):
+    nii = nib.load(nii_path)
+    affine = nii.affine
+    header = nii.header
+    arr = nii.get_fdata()
+    save_path = nii_path.replace('.nii', '.nii.gz')
+    save_nii(nii_path, header, affine, arr)
 
 def niigz2nii(niigz_path):
-    """ Convert niigz to nii """
     nii = nib.load(niigz_path)
-    nib.save(nii, niigz_path[:-3])
-    os.remove(niigz_path)
+    affine = nii.affine
+    header = nii.header
+    arr = nii.get_fdata()
+    save_path = niigz_path.replace('.nii.gz', '.nii')
+    save_nii(save_path, header, affine, arr)
 
-def nii2dcm(save_dir_path, nifti_dir_path, ref_dicom_dir_path, debug = False):
-
-    """ Convert nii to dcm
-    
-    Parameters
-    ----------
-    save_dir_path : str 
-    nifti_dir_path : str
-    ref_dicom_dir_path : str
-    debug : bool
-    If True, print the path of nifti and dicom files
-
-    """
-    nii_paths = glob.glob(nifti_dir_path + '/*.nii')
-    nii_paths.sort()
-    dicom_dir_paths = glob.glob(ref_dicom_dir_path + '/*/')
-    dicom_dir_paths.sort()
-
-    # nifti files, reference dicom directories check the number
-    if len(nii_paths)!=len(dicom_dir_paths):
-        print('The number of nii files and dicom directories are not the same.')
-
-    else: 
-        for nii_path, dicom_dir_path in tqdm(zip(nii_paths, dicom_dir_paths)):
-            nii = load_nii(nii_path)
-            dcm = load_dcm(dicom_dir_path)
-            if nii.shape != dcm.shape:
-                print('The shape of nii and dicom are not the same.')
-                print('nii shape : ', nii.shape)
-                print('dcm shape : ', dcm.shape)
-                break
-            else : 
-                pass
-            
-
-            save_dir   =os.path.join(save_dir_path, get_dirname(nii_path))
-            os.makedirs(save_dir, exist_ok=True)
-            dicom_file_paths = glob.glob(dicom_dir_path + '/*.dcm')
-            dicom_file_paths.sort()
-            if len(dicom_file_paths) == 0:
-                dicom_file_paths = glob.glob(dicom_dir_path + '/*.DCM')
-                dicom_file_paths.sort()
-            
-            nifti_array = nii
-            nifti_array = np.flip(np.flip(nifti_array,1),2)
-            nifti_array = np.swapaxes(nifti_array, 0, 1)
-
-            nifti_slices = nifti_array.shape[2]
-
-            for slice_idx in range(nifti_slices):
-                nii_2d_array= nifti_array[:,:,slice_idx]
-                dicom_file = pydicom.dcmread(dicom_file_paths[slice_idx])
-                arr = nii_2d_array.astype(np.int16)
-                dicom_file.Rows, dicom_file.Columns = arr.shape
-                dicom_file.PixelData = arr.tobytes()
-                dicom_file.BitsStored = 16
-                dicom_file.BitsAllocated = 16
-                dicom_file.HighBit = 15
-                dicom_file.PixelRepresentation = 0
-                dicom_file.RescaleIntercept = 0
-                dicom_file.RescaleSlope = 1
-                dicom_file.PixelSpacing = [dicom_file.PixelSpacing[0], dicom_file.PixelSpacing[1]]
-                dicom_file.SeriesDescription = 'Converted from Nifti file'
-                dicom_file.save_as(os.path.join(save_dir,f'slice_00{slice:04}.dcm'))
-    clear_output(wait=True)
-    print('nifti2dicom conversion completed!')
-
-def raw2nii(raw_dir_path, nii_dir_path, save_dir_path, debug = False):
-    niis = glob.glob(nii_dir_path + '/*.nii')
-    niis.sort()
-    gz_flag = False
-    if len(niis) == 0:
-        gz_flag = True
-        niis = glob.glob(nii_dir_path+'/*.nii.gz')
-        niis.sort()
+def nnunet_preprocess(nii_path):
+    nii = nib.load(nii_path)
+    header = nii.header
+    affine = nii.affine
+    arr = nii.get_fdata()
+    file_name = os.path.basename(nii_path)
+    if file_name.endswith('.nii.gz'):
+        file_name = file_name.replace('.nii.gz', '_0000.nii.gz')
+    elif file_name.endswith('.nii'):
+        file_name = file_name.replace('.nii', '_0000.nii.gz')
     else:
-        pass
-    for nii in tqdm(niis):
-        file_name  = get_filename(nii)
-        if gz_flag:
-
-            raw_files = glob.glob(raw_dir_path + f'/{file_name[:-7]}*')
-        else:
-            raw_files = glob.glob(raw_dir_path + f'/{file_name[:-4]}*')
-            
-        raw_files.sort()
-
-        if len(raw_files) == 0:
-            print(f'No raw file found for {file_name}')
-            continue
-        else:
-            pass
-
-
-        if debug:
-            print(f'raw file : {raw_files}')
-            print(f'nii file : {nii}')
-        else:
-            pass    
-        
-
-        nii_arr = load_nii(nii)
-        mask_out = np.zeros((nii_arr.shape[2], nii_arr.shape[1], nii_arr.shape[0])) 
-        for i, raw_file in enumerate(raw_files,1):
-            cls = int(raw_file[raw_file.rfind('_gt')+3:raw_file.rfind('.')])
-            mask = np.fromfile(raw_file, dtype='uint8', sep="")
-            
+        raise ValueError(f"Invalid file name: {file_name}")
+    
+    save_path = os.path.join(os.path.dirname(nii_path), file_name)
+    save_nii(save_path, header, affine, arr)
+    return save_path
