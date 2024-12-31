@@ -15,10 +15,6 @@ import pandas as pd
 import nibabel as nib
 import os,  glob, shutil
 import dicom2nifti
-import dicom2nifti.settings as settings
-settings.disable_validate_slice_increment()
-settings.disable_validate_siemens_slice_increment()
-settings.disable_validate_siemens_slice_timing()
 import nibabel as nib
 import pydicom
 
